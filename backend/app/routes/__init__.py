@@ -2,4 +2,4 @@ from flask import Blueprint
 
 students_bp = Blueprint("students", __name__)
 
-# Route handlers will be added in Milestone 3
+from app.routes import students  # noqa: E402, F401 — register route handlers
