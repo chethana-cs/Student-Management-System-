@@ -129,8 +129,43 @@ def create_student():
 
 @students_bp.route("", methods=["GET"])
 def list_students():
-    students = Student.query.all()
-    return jsonify([s.to_dict() for s in students]), 200
+    # Pagination params
+    try:
+        page = int(request.args.get("page", 1))
+        per_page = int(request.args.get("per_page", 10))
+    except (ValueError, TypeError):
+        return jsonify({"error": "page and per_page must be positive integers."}), 400
+
+    if page < 1 or per_page < 1:
+        return jsonify({"error": "page and per_page must be positive integers."}), 400
+
+    if per_page > 100:
+        per_page = 100
+
+    # Filtering
+    query = Student.query
+    enrollment_status = request.args.get("enrollment_status")
+    if enrollment_status:
+        status = enrollment_status.strip().lower()
+        if status not in VALID_ENROLLMENT_STATUSES:
+            return jsonify({
+                "error": f"Invalid enrollment_status filter. Must be one of: {', '.join(sorted(VALID_ENROLLMENT_STATUSES))}."
+            }), 400
+        query = query.filter_by(enrollment_status=status)
+
+    # Order by most recently created first
+    query = query.order_by(Student.created_at.desc())
+
+    # Paginate
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return jsonify({
+        "students": [s.to_dict() for s in pagination.items],
+        "total": pagination.total,
+        "page": pagination.page,
+        "per_page": pagination.per_page,
+        "pages": pagination.pages,
+    }), 200
 
 
 @students_bp.route("/<int:student_id>", methods=["GET"])
