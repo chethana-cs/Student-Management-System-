@@ -26,7 +26,6 @@ function getEmptyForm() {
   }
 }
 
-// When student prop changes (edit mode), populate the form
 watch(
   () => props.student,
   (s) => {
@@ -120,22 +119,23 @@ async function onSubmit() {
   try {
     if (isEdit.value) {
       await updateStudent(props.student.id, payload)
+      emit('saved', 'update')
     } else {
       await createStudent(payload)
+      emit('saved', 'create')
     }
-    emit('saved')
   } catch (err) {
     if (err.response && err.response.data) {
       const data = err.response.data
       if (data.details) {
-        apiError.value = data.details.join(' ')
+        apiError.value = Array.isArray(data.details) ? data.details.join(' ') : data.details
       } else if (data.error) {
         apiError.value = data.error
       } else {
         apiError.value = 'An unexpected error occurred.'
       }
     } else {
-      apiError.value = 'Network error. Please check your connection.'
+      apiError.value = 'Network error. Please check your backend connection.'
     }
   } finally {
     submitting.value = false
@@ -144,14 +144,14 @@ async function onSubmit() {
 </script>
 
 <template>
-  <div class="student-form">
+  <div class="student-form" role="region" aria-label="Student Form">
     <div class="form-header">
       <div class="form-icon">{{ isEdit ? '✏️' : '➕' }}</div>
-      <h2>{{ isEdit ? 'Edit Student' : 'Add New Student' }}</h2>
+      <h2>{{ isEdit ? 'Edit Student Record' : 'Add New Student' }}</h2>
     </div>
 
     <!-- API error banner -->
-    <div v-if="apiError" class="error-banner">
+    <div v-if="apiError" class="error-banner" role="alert">
       <span class="error-icon">⚠️</span>
       <span>{{ apiError }}</span>
     </div>
@@ -191,12 +191,12 @@ async function onSubmit() {
       </div>
 
       <div class="form-group" :class="{ 'has-error': touched.email && fieldErrors.email }">
-        <label for="email">Email <span class="required">*</span></label>
+        <label for="email">Email Address <span class="required">*</span></label>
         <input
           id="email"
           v-model="form.email"
           type="email"
-          placeholder="e.g. jane@example.com"
+          placeholder="e.g. jane.doe@example.com"
           :disabled="submitting"
           @blur="markTouched('email')"
           @input="validateField('email')"
@@ -222,7 +222,7 @@ async function onSubmit() {
           </p>
         </div>
         <div class="form-group">
-          <label for="enrollment_status">Status <span class="required">*</span></label>
+          <label for="enrollment_status">Enrollment Status <span class="required">*</span></label>
           <select
             id="enrollment_status"
             v-model="form.enrollment_status"
@@ -250,12 +250,12 @@ async function onSubmit() {
 
 <style scoped>
 .student-form {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  background: var(--color-surface, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
   border-radius: 12px;
-  padding: 1.75rem;
+  padding: 1.5rem;
   margin-bottom: 1.5rem;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
 }
 
 .form-header {
@@ -271,17 +271,16 @@ async function onSubmit() {
 
 h2 {
   margin: 0;
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: var(--color-text);
+  color: var(--color-text, #0f172a);
 }
 
-/* Error banner for API errors */
 .error-banner {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: linear-gradient(135deg, #fef2f2, #fff1f2);
+  background: #fef2f2;
   border: 1px solid #fecaca;
   color: #991b1b;
   border-radius: 8px;
@@ -289,20 +288,12 @@ h2 {
   margin-bottom: 1.25rem;
   font-size: 0.875rem;
   font-weight: 500;
-  animation: shake 0.3s ease-in-out;
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
 }
 
 .error-icon {
   flex-shrink: 0;
 }
 
-/* Form layout */
 .form-row {
   display: flex;
   gap: 1rem;
@@ -320,24 +311,23 @@ h2 {
   display: block;
   font-size: 0.825rem;
   font-weight: 600;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #64748b);
   margin-bottom: 0.35rem;
-  letter-spacing: 0.01em;
 }
 
 .required {
-  color: var(--color-danger);
+  color: var(--color-danger, #ef4444);
 }
 
 .form-group input,
 .form-group select {
   width: 100%;
-  padding: 0.6rem 0.85rem;
-  border: 1.5px solid var(--color-border);
+  padding: 0.55rem 0.85rem;
+  border: 1.5px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  font-size: 0.9rem;
-  background: var(--color-bg);
-  color: var(--color-text);
+  font-size: 0.875rem;
+  background: #ffffff;
+  color: var(--color-text, #0f172a);
   box-sizing: border-box;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -345,13 +335,13 @@ h2 {
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: var(--color-primary, #6366f1);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .form-group.has-error input,
 .form-group.has-error select {
-  border-color: var(--color-danger);
+  border-color: var(--color-danger, #ef4444);
 }
 
 .form-group.has-error input:focus,
@@ -362,17 +352,10 @@ h2 {
 .field-error {
   margin: 0.3rem 0 0;
   font-size: 0.8rem;
-  color: var(--color-danger);
+  color: var(--color-danger, #ef4444);
   font-weight: 500;
-  animation: fadeIn 0.2s ease;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Actions */
 .form-actions {
   display: flex;
   gap: 0.75rem;
@@ -385,7 +368,7 @@ h2 {
   width: 0.85rem;
   height: 0.85rem;
   border: 2px solid rgba(255, 255, 255, 0.3);
-  border-top-color: #fff;
+  border-top-color: #ffffff;
   border-radius: 50%;
   animation: spin 0.6s linear infinite;
   margin-right: 0.4rem;

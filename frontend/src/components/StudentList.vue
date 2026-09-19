@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { getStudents, deleteStudent } from '@/services/api'
+import ConfirmModal from '@/components/ConfirmModal.vue'
+import StudentDetailModal from '@/components/StudentDetailModal.vue'
 
-const emit = defineEmits(['edit'])
+const emit = defineEmits(['edit', 'toast'])
 
 const students = ref([])
 const loading = ref(false)
@@ -12,7 +14,38 @@ const perPage = ref(10)
 const totalPages = ref(1)
 const totalStudents = ref(0)
 const statusFilter = ref('')
-const deletingId = ref(null)
+const searchQuery = ref('')
+
+// Modal state
+const studentToDelete = ref(null)
+const deleting = ref(false)
+const selectedStudentId = ref(null)
+const showDetailModal = ref(false)
+
+// Filter students by search query client-side
+const filteredStudents = computed(() => {
+  if (!searchQuery.value.trim()) return students.value
+  const q = searchQuery.value.toLowerCase().trim()
+  return students.value.filter(
+    (s) =>
+      s.first_name.toLowerCase().includes(q) ||
+      s.last_name.toLowerCase().includes(q) ||
+      s.email.toLowerCase().includes(q)
+  )
+})
+
+// Metrics summary calculations
+const metrics = computed(() => {
+  const active = students.value.filter((s) => s.enrollment_status === 'active').length
+  const graduated = students.value.filter((s) => s.enrollment_status === 'graduated').length
+  const dropped = students.value.filter((s) => s.enrollment_status === 'dropped').length
+  return {
+    total: totalStudents.value,
+    active,
+    graduated,
+    dropped,
+  }
+})
 
 const showingRange = computed(() => {
   if (totalStudents.value === 0) return '0 students'
@@ -21,7 +54,6 @@ const showingRange = computed(() => {
   return `Showing ${start}–${end} of ${totalStudents.value} student${totalStudents.value !== 1 ? 's' : ''}`
 })
 
-// Compute visible page numbers for numbered pagination
 const visiblePages = computed(() => {
   const total = totalPages.value || 1
   if (total <= 7) {
@@ -51,7 +83,7 @@ async function fetchStudents() {
     totalPages.value = data.pages || 1
     totalStudents.value = data.total || 0
   } catch (err) {
-    error.value = 'Failed to load students. Please try again.'
+    error.value = 'Failed to load students. Please check your connection and try again.'
     students.value = []
   } finally {
     loading.value = false
@@ -83,22 +115,33 @@ function nextPage() {
   }
 }
 
-async function onDelete(student) {
-  if (!confirm(`Are you sure you want to delete ${student.first_name} ${student.last_name}?`)) return
-  deletingId.value = student.id
+function openViewModal(studentId) {
+  selectedStudentId.value = studentId
+  showDetailModal.value = true
+}
+
+function promptDelete(student) {
+  studentToDelete.value = student
+}
+
+async function confirmDelete() {
+  if (!studentToDelete.value) return
+  deleting.value = true
   try {
-    await deleteStudent(student.id)
+    await deleteStudent(studentToDelete.value.id)
+    emit('toast', { message: `Student ${studentToDelete.value.first_name} deleted.`, type: 'success' })
+    studentToDelete.value = null
     await fetchStudents()
   } catch (err) {
-    alert('Failed to delete student. Please try again.')
+    emit('toast', { message: 'Failed to delete student.', type: 'error' })
   } finally {
-    deletingId.value = null
+    deleting.value = false
   }
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
-  const d = new Date(dateStr + 'T00:00:00')
+  const d = new Date(dateStr + (dateStr.includes('T') ? '' : 'T00:00:00'))
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
@@ -113,48 +156,88 @@ fetchStudents()
 
 <template>
   <div class="student-list">
-    <!-- Toolbar -->
-    <div class="toolbar">
-      <div class="filter-group">
-        <label for="status-filter">Filter by status:</label>
-        <select id="status-filter" v-model="statusFilter" @change="onFilterChange">
-          <option value="">All Students</option>
-          <option value="active">Active</option>
-          <option value="graduated">Graduated</option>
-          <option value="dropped">Dropped</option>
-        </select>
+    <!-- Compact Metric Summary Bar -->
+    <div class="metrics-bar">
+      <div class="metric-card">
+        <span class="metric-value">{{ metrics.total }}</span>
+        <span class="metric-label">Total Students</span>
       </div>
+      <div class="metric-card">
+        <span class="metric-value text-active">{{ metrics.active }}</span>
+        <span class="metric-label">Active</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-value text-graduated">{{ metrics.graduated }}</span>
+        <span class="metric-label">Graduated</span>
+      </div>
+      <div class="metric-card">
+        <span class="metric-value text-dropped">{{ metrics.dropped }}</span>
+        <span class="metric-label">Dropped</span>
+      </div>
+    </div>
+
+    <!-- Toolbar: Search + Filter + Range -->
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <div class="search-box">
+          <span class="search-icon">🔍</span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search by name or email..."
+            class="search-input"
+            aria-label="Search students"
+          />
+        </div>
+
+        <div class="filter-group">
+          <label for="status-filter">Status:</label>
+          <select id="status-filter" v-model="statusFilter" @change="onFilterChange">
+            <option value="">All Statuses</option>
+            <option value="active">Active</option>
+            <option value="graduated">Graduated</option>
+            <option value="dropped">Dropped</option>
+          </select>
+        </div>
+      </div>
+
       <div class="total-count" v-if="!loading && !error">
         {{ showingRange }}
       </div>
     </div>
 
-    <!-- Loading state -->
-    <div v-if="loading" class="state-card loading-state">
-      <div class="spinner-ring"></div>
-      <p class="state-title">Loading students...</p>
-      <p class="state-subtitle">Fetching data from server</p>
+    <!-- Skeleton Loading State -->
+    <div v-if="loading" class="skeleton-wrapper">
+      <div v-for="n in 5" :key="n" class="skeleton-row">
+        <div class="skeleton-cell sk-avatar"></div>
+        <div class="skeleton-cell sk-text sk-wide"></div>
+        <div class="skeleton-cell sk-text"></div>
+        <div class="skeleton-cell sk-text sk-short"></div>
+      </div>
     </div>
 
-    <!-- Error state -->
+    <!-- Error State -->
     <div v-else-if="error" class="state-card error-state">
       <div class="state-emoji">😕</div>
       <p class="state-title">Failed to load students</p>
-      <p class="state-subtitle">Something went wrong while fetching data.</p>
+      <p class="state-subtitle">{{ error }}</p>
       <button @click="fetchStudents" class="btn btn-primary retry-btn">
         🔄 Retry
       </button>
     </div>
 
-    <!-- Empty state -->
-    <div v-else-if="students.length === 0" class="state-card empty-state">
+    <!-- Empty State -->
+    <div v-else-if="filteredStudents.length === 0" class="state-card empty-state">
       <div class="state-emoji">📋</div>
       <p class="state-title">No students found</p>
-      <p class="state-subtitle" v-if="statusFilter">
+      <p class="state-subtitle" v-if="searchQuery">
+        No results matching "{{ searchQuery }}". Try a different search term.
+      </p>
+      <p class="state-subtitle" v-else-if="statusFilter">
         No students with status "{{ statusFilter }}". Try changing the filter.
       </p>
       <p class="state-subtitle" v-else>
-        Get started by adding your first student.
+        Get started by adding your first student record.
       </p>
     </div>
 
@@ -171,7 +254,12 @@ fetchStudents()
           </tr>
         </thead>
         <tbody>
-          <tr v-for="student in students" :key="student.id" class="student-row">
+          <tr
+            v-for="student in filteredStudents"
+            :key="student.id"
+            class="student-row"
+            @click="openViewModal(student.id)"
+          >
             <td class="td-name">
               <span class="avatar">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
               {{ student.first_name }} {{ student.last_name }}
@@ -183,18 +271,27 @@ fetchStudents()
                 {{ student.enrollment_status }}
               </span>
             </td>
-            <td class="td-actions">
-              <button @click="emit('edit', student)" class="btn btn-small btn-outline" title="Edit student">
+            <td class="td-actions" @click.stop>
+              <button
+                @click="openViewModal(student.id)"
+                class="btn btn-small btn-ghost"
+                title="View details"
+              >
+                👁️ View
+              </button>
+              <button
+                @click="emit('edit', student)"
+                class="btn btn-small btn-outline"
+                title="Edit student"
+              >
                 ✏️ Edit
               </button>
               <button
-                @click="onDelete(student)"
+                @click="promptDelete(student)"
                 class="btn btn-small btn-danger"
-                :disabled="deletingId === student.id"
                 title="Delete student"
               >
-                {{ deletingId === student.id ? '⏳' : '🗑️' }}
-                {{ deletingId === student.id ? 'Deleting...' : 'Delete' }}
+                🗑️ Delete
               </button>
             </td>
           </tr>
@@ -202,7 +299,7 @@ fetchStudents()
       </table>
     </div>
 
-    <!-- Always Visible Pagination Bar -->
+    <!-- Pagination Bar -->
     <div v-if="students.length > 0 && !loading && !error" class="pagination-container">
       <div class="pagination-info">
         Page <strong>{{ page }}</strong> of <strong>{{ totalPages || 1 }}</strong>
@@ -240,6 +337,26 @@ fetchStudents()
         </button>
       </div>
     </div>
+
+    <!-- Delete Confirm Modal -->
+    <ConfirmModal
+      :show="studentToDelete !== null"
+      title="Delete Student Record"
+      :message="`Are you sure you want to delete ${studentToDelete?.first_name} ${studentToDelete?.last_name}? This action cannot be undone.`"
+      confirmText="Delete Student"
+      confirmType="danger"
+      :loading="deleting"
+      @confirm="confirmDelete"
+      @cancel="studentToDelete = null"
+    />
+
+    <!-- Student Detail View Modal -->
+    <StudentDetailModal
+      :show="showDetailModal"
+      :studentId="selectedStudentId"
+      @close="showDetailModal = false"
+      @edit="(s) => emit('edit', s)"
+    />
   </div>
 </template>
 
@@ -247,6 +364,41 @@ fetchStudents()
 .student-list {
   width: 100%;
 }
+
+/* Metrics Summary Bar */
+.metrics-bar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.metric-card {
+  background: var(--color-bg, #f8fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text, #1e293b);
+  line-height: 1.2;
+}
+
+.metric-label {
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #64748b);
+  margin-top: 0.15rem;
+}
+
+.text-active { color: #16a34a; }
+.text-graduated { color: #2563eb; }
+.text-dropped { color: #d97706; }
 
 /* Toolbar */
 .toolbar {
@@ -258,25 +410,62 @@ fetchStudents()
   gap: 0.75rem;
 }
 
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.search-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.65rem;
+  font-size: 0.85rem;
+  pointer-events: none;
+  opacity: 0.6;
+}
+
+.search-input {
+  padding: 0.45rem 0.85rem 0.45rem 2.1rem;
+  border: 1.5px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #1e293b);
+  font-size: 0.85rem;
+  width: 220px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #6366f1);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+}
+
 .filter-group {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
 .filter-group label {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
-  white-space: nowrap;
+  color: var(--color-text-secondary, #64748b);
   font-weight: 500;
 }
 
 .filter-group select {
   padding: 0.45rem 0.85rem;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  background: var(--color-bg);
-  color: var(--color-text);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #1e293b);
   font-size: 0.85rem;
   cursor: pointer;
   transition: border-color 0.2s;
@@ -284,23 +473,58 @@ fetchStudents()
 
 .filter-group select:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: var(--color-primary, #6366f1);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
 }
 
 .total-count {
-  font-size: 0.875rem;
-  color: var(--color-text-secondary);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #64748b);
   font-weight: 500;
 }
 
-/* State cards (Loading, Error, Empty) */
+/* Skeleton Loading */
+.skeleton-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+}
+
+.skeleton-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #f8fafc;
+  border-radius: 8px;
+}
+
+.skeleton-cell {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 4px;
+  height: 1rem;
+}
+
+.sk-avatar { width: 2rem; height: 2rem; border-radius: 50%; }
+.sk-wide { width: 35%; }
+.sk-text { width: 25%; }
+.sk-short { width: 15%; }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* State cards (Error, Empty) */
 .state-card {
   text-align: center;
   padding: 3.5rem 1.5rem;
   border-radius: 12px;
-  border: 1.5px dashed var(--color-border);
-  background: var(--color-bg);
+  border: 1.5px dashed var(--color-border, #e2e8f0);
+  background: var(--color-surface, #ffffff);
 }
 
 .state-emoji {
@@ -311,50 +535,29 @@ fetchStudents()
 .state-title {
   font-size: 1.05rem;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text, #1e293b);
   margin: 0.5rem 0 0.3rem;
 }
 
 .state-subtitle {
   font-size: 0.875rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #64748b);
   margin: 0;
 }
 
 .error-state {
   border-color: #fecaca;
-  background: linear-gradient(135deg, #fff5f5, #fff);
+  background: linear-gradient(135deg, #fff5f5, #ffffff);
 }
 
-.error-state .state-title {
-  color: #991b1b;
-}
-
-.retry-btn {
-  margin-top: 1rem;
-}
-
-/* Loading spinner */
-.spinner-ring {
-  display: inline-block;
-  width: 2.5rem;
-  height: 2.5rem;
-  border: 3px solid var(--color-border);
-  border-top-color: var(--color-primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-bottom: 0.5rem;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
+.error-state .state-title { color: #991b1b; }
+.retry-btn { margin-top: 1rem; }
 
 /* Table */
 .table-wrapper {
   overflow-x: auto;
   border-radius: 10px;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-border, #e2e8f0);
 }
 
 table {
@@ -365,36 +568,31 @@ table {
 thead th {
   text-align: left;
   padding: 0.85rem 1rem;
-  background: var(--color-bg);
-  border-bottom: 2px solid var(--color-border);
+  background: #f8fafc;
+  border-bottom: 2px solid var(--color-border, #e2e8f0);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #64748b);
   font-weight: 600;
 }
 
-.th-actions {
-  text-align: right;
-}
+.th-actions { text-align: right; }
 
 tbody td {
   padding: 0.8rem 1rem;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
   font-size: 0.9rem;
 }
 
-tbody tr:last-child td {
-  border-bottom: none;
-}
+tbody tr:last-child td { border-bottom: none; }
 
 .student-row {
+  cursor: pointer;
   transition: background 0.15s;
 }
 
-.student-row:hover {
-  background: var(--color-row-hover);
-}
+.student-row:hover { background: #f8fafc; }
 
 /* Avatar */
 .td-name {
@@ -411,17 +609,15 @@ tbody tr:last-child td {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--color-primary), #818cf8);
-  color: #fff;
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #ffffff;
   font-size: 0.7rem;
   font-weight: 700;
   text-transform: uppercase;
   flex-shrink: 0;
 }
 
-.td-email {
-  color: var(--color-text-secondary);
-}
+.td-email { color: var(--color-text-secondary, #64748b); }
 
 /* Status badges */
 .status-badge {
@@ -431,32 +627,15 @@ tbody tr:last-child td {
   font-size: 0.75rem;
   font-weight: 600;
   text-transform: capitalize;
-  letter-spacing: 0.02em;
 }
 
-.status-active {
-  background: #dcfce7;
-  color: #15803d;
-}
-
-.status-graduated {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.status-dropped {
-  background: #fef3c7;
-  color: #b45309;
-}
+.status-active { background: #dcfce7; color: #15803d; }
+.status-graduated { background: #dbeafe; color: #1d4ed8; }
+.status-dropped { background: #fef3c7; color: #b45309; }
 
 /* Actions */
-.td-actions {
-  text-align: right;
-}
-
-.td-actions .btn {
-  margin-left: 0.4rem;
-}
+.td-actions { text-align: right; }
+.td-actions .btn { margin-left: 0.35rem; }
 
 /* Pagination Container */
 .pagination-container {
@@ -465,14 +644,14 @@ tbody tr:last-child td {
   align-items: center;
   margin-top: 1.25rem;
   padding-top: 1rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid var(--color-border, #e2e8f0);
   flex-wrap: wrap;
   gap: 0.75rem;
 }
 
 .pagination-info {
   font-size: 0.85rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #64748b);
 }
 
 .pagination-controls {
@@ -481,10 +660,7 @@ tbody tr:last-child td {
   gap: 0.5rem;
 }
 
-.page-numbers {
-  display: flex;
-  gap: 0.25rem;
-}
+.page-numbers { display: flex; gap: 0.25rem; }
 
 .btn-page {
   display: inline-flex;
@@ -493,10 +669,10 @@ tbody tr:last-child td {
   min-width: 2.25rem;
   height: 2.25rem;
   padding: 0 0.6rem;
-  border: 1.5px solid var(--color-border);
+  border: 1.5px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
-  background: var(--color-surface);
-  color: var(--color-text);
+  background: var(--color-surface, #ffffff);
+  color: var(--color-text, #1e293b);
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -504,9 +680,9 @@ tbody tr:last-child td {
 }
 
 .btn-page:hover:not(:disabled):not(.btn-page-active) {
-  background: var(--color-bg);
-  border-color: var(--color-primary);
-  color: var(--color-primary);
+  background: #f8fafc;
+  border-color: #6366f1;
+  color: #6366f1;
 }
 
 .btn-page:disabled {
@@ -515,9 +691,9 @@ tbody tr:last-child td {
 }
 
 .btn-page-active {
-  background: var(--color-primary);
-  border-color: var(--color-primary);
-  color: #fff;
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #ffffff;
   font-weight: 600;
   cursor: default;
 }
@@ -527,7 +703,7 @@ tbody tr:last-child td {
   background: transparent;
   cursor: default;
   min-width: 1.5rem;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #64748b);
 }
 
 .btn-nav {
@@ -535,10 +711,12 @@ tbody tr:last-child td {
   padding: 0 0.85rem;
 }
 
-@media (max-width: 700px) {
-  .pagination-container {
-    flex-direction: column;
-    align-items: center;
+@media (max-width: 768px) {
+  .metrics-bar {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .search-input {
+    width: 100%;
   }
 }
 </style>

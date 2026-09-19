@@ -2,10 +2,28 @@
 import { ref } from 'vue'
 import StudentList from '@/components/StudentList.vue'
 import StudentForm from '@/components/StudentForm.vue'
+import ToastNotification from '@/components/ToastNotification.vue'
 
 const showForm = ref(false)
 const editingStudent = ref(null)
 const listRef = ref(null)
+const toasts = ref([])
+
+function addToast(message, type = 'success') {
+  const id = Date.now() + Math.random()
+  toasts.value.push({ id, message, type })
+  setTimeout(() => {
+    dismissToast(id)
+  }, 4000)
+}
+
+function dismissToast(id) {
+  toasts.value = toasts.value.filter((t) => t.id !== id)
+}
+
+function handleToastFromList(payload) {
+  addToast(payload.message, payload.type)
+}
 
 function openCreateForm() {
   editingStudent.value = null
@@ -15,10 +33,13 @@ function openCreateForm() {
 function openEditForm(student) {
   editingStudent.value = { ...student }
   showForm.value = true
+  window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
-function onSaved() {
+function onSaved(actionType) {
   showForm.value = false
+  const msg = actionType === 'update' ? 'Student record updated.' : 'Student created successfully.'
+  addToast(msg, 'success')
   editingStudent.value = null
   listRef.value?.fetchStudents()
 }
@@ -36,7 +57,7 @@ function onCancel() {
         <div class="logo">🎓</div>
         <div>
           <h1>Student Management System</h1>
-          <p class="header-subtitle">Manage student records efficiently</p>
+          <p class="header-subtitle">Internal Student Directory & Administration</p>
         </div>
       </div>
       <button v-if="!showForm" @click="openCreateForm" class="btn btn-primary btn-add">
@@ -53,17 +74,23 @@ function onCancel() {
           @cancel="onCancel"
         />
       </transition>
-      <StudentList ref="listRef" @edit="openEditForm" />
+      <StudentList
+        ref="listRef"
+        @edit="openEditForm"
+        @toast="handleToastFromList"
+      />
     </main>
+
+    <ToastNotification :toasts="toasts" @dismiss="dismissToast" />
   </div>
 </template>
 
 <style>
-/* === CSS Variables (Design Tokens) === */
+/* === Clean SaaS Design Tokens === */
 :root {
-  --color-bg: #f1f5f9;
+  --color-bg: #f8fafc;
   --color-surface: #ffffff;
-  --color-text: #1e293b;
+  --color-text: #0f172a;
   --color-text-secondary: #64748b;
   --color-primary: #6366f1;
   --color-primary-hover: #4f46e5;
@@ -71,10 +98,8 @@ function onCancel() {
   --color-danger: #ef4444;
   --color-danger-hover: #dc2626;
   --color-border: #e2e8f0;
-  --color-row-hover: #f8fafc;
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.08);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --radius: 12px;
 }
 
@@ -91,14 +116,14 @@ body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background: var(--color-bg);
   color: var(--color-text);
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
 }
 
 /* === App Shell === */
 .app-shell {
-  max-width: 1000px;
+  max-width: 1024px;
   margin: 0 auto;
   padding: 2rem 1.5rem 3rem;
 }
@@ -108,7 +133,7 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.75rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -125,7 +150,7 @@ body {
 }
 
 .app-header h1 {
-  font-size: 1.5rem;
+  font-size: 1.35rem;
   font-weight: 800;
   color: var(--color-text);
   letter-spacing: -0.02em;
@@ -133,33 +158,33 @@ body {
 }
 
 .header-subtitle {
-  font-size: 0.85rem;
+  font-size: 0.825rem;
   color: var(--color-text-secondary);
   margin-top: 0.1rem;
 }
 
-/* === Main Content Area === */
+/* === Main Container === */
 .app-main {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius);
-  padding: 1.75rem;
-  box-shadow: var(--shadow-md);
+  padding: 1.5rem;
+  box-shadow: var(--shadow-sm);
 }
 
-/* === Shared Button Styles === */
+/* === Shared Button Hierarchy === */
 .btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
-  padding: 0.55rem 1.1rem;
-  border: none;
+  padding: 0.5rem 1rem;
+  border: 1px solid transparent;
   border-radius: 8px;
-  font-size: 0.875rem;
+  font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   text-decoration: none;
   line-height: 1.4;
 }
@@ -170,31 +195,31 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(135deg, var(--color-primary), #818cf8);
-  color: #fff;
-  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+  background: var(--color-primary);
+  color: #ffffff;
+  border-color: var(--color-primary);
+  box-shadow: 0 1px 2px rgba(99, 102, 241, 0.2);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, var(--color-primary-hover), #6366f1);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
-  transform: translateY(-1px);
+  background: var(--color-primary-hover);
+  border-color: var(--color-primary-hover);
 }
 
 .btn-add {
-  padding: 0.6rem 1.25rem;
-  font-size: 0.9rem;
+  padding: 0.55rem 1.15rem;
+  font-size: 0.875rem;
 }
 
 .btn-icon {
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   font-weight: 700;
 }
 
 .btn-outline {
   background: var(--color-surface);
   color: var(--color-text);
-  border: 1.5px solid var(--color-border);
+  border-color: var(--color-border);
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -206,18 +231,18 @@ body {
 .btn-ghost {
   background: transparent;
   color: var(--color-text-secondary);
-  border: 1.5px solid var(--color-border);
+  border-color: var(--color-border);
 }
 
 .btn-ghost:hover:not(:disabled) {
-  background: var(--color-bg);
+  background: #f1f5f9;
   color: var(--color-text);
 }
 
 .btn-danger {
   background: var(--color-surface);
   color: var(--color-danger);
-  border: 1.5px solid #fecaca;
+  border-color: #fecaca;
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -226,41 +251,20 @@ body {
 }
 
 .btn-small {
-  padding: 0.35rem 0.65rem;
-  font-size: 0.8rem;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.775rem;
 }
 
 /* === Transitions === */
-.slide-fade-enter-active {
-  transition: all 0.25s ease-out;
-}
-
-.slide-fade-leave-active {
-  transition: all 0.2s ease-in;
-}
-
-.slide-fade-enter-from {
-  opacity: 0;
-  transform: translateY(-10px);
-}
-
-.slide-fade-leave-to {
-  opacity: 0;
-  transform: translateY(-10px);
-}
+.slide-fade-enter-active { transition: all 0.25s ease-out; }
+.slide-fade-leave-active { transition: all 0.2s ease-in; }
+.slide-fade-enter-from { opacity: 0; transform: translateY(-8px); }
+.slide-fade-leave-to { opacity: 0; transform: translateY(-8px); }
 
 /* === Responsive === */
-@media (max-width: 600px) {
-  .app-shell {
-    padding: 1rem;
-  }
-
-  .app-header h1 {
-    font-size: 1.2rem;
-  }
-
-  .app-main {
-    padding: 1rem;
-  }
+@media (max-width: 640px) {
+  .app-shell { padding: 1rem; }
+  .app-main { padding: 1rem; }
+  .app-header h1 { font-size: 1.15rem; }
 }
 </style>
