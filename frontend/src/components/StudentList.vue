@@ -247,8 +247,6 @@ fetchStudents()
         <thead>
           <tr>
             <th>Name</th>
-            <th>Email</th>
-            <th>Date of Birth</th>
             <th>Status</th>
             <th class="th-actions">Actions</th>
           </tr>
@@ -264,8 +262,6 @@ fetchStudents()
               <span class="avatar">{{ student.first_name[0] }}{{ student.last_name[0] }}</span>
               {{ student.first_name }} {{ student.last_name }}
             </td>
-            <td class="td-email">{{ student.email }}</td>
-            <td>{{ formatDate(student.date_of_birth) }}</td>
             <td>
               <span :class="statusClass(student.enrollment_status)">
                 {{ student.enrollment_status }}
