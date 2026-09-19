@@ -9,14 +9,21 @@ const loading = ref(false)
 const error = ref('')
 const page = ref(1)
 const perPage = ref(10)
-const totalPages = ref(0)
+const totalPages = ref(1)
 const totalStudents = ref(0)
 const statusFilter = ref('')
 const deletingId = ref(null)
 
+const showingRange = computed(() => {
+  if (totalStudents.value === 0) return '0 students'
+  const start = (page.value - 1) * perPage.value + 1
+  const end = Math.min(page.value * perPage.value, totalStudents.value)
+  return `Showing ${start}–${end} of ${totalStudents.value} student${totalStudents.value !== 1 ? 's' : ''}`
+})
+
 // Compute visible page numbers for numbered pagination
 const visiblePages = computed(() => {
-  const total = totalPages.value
+  const total = totalPages.value || 1
   if (total <= 7) {
     return Array.from({ length: total }, (_, i) => i + 1)
   }
@@ -41,8 +48,8 @@ async function fetchStudents() {
     const response = await getStudents(page.value, perPage.value, statusFilter.value)
     const data = response.data
     students.value = data.students
-    totalPages.value = data.pages
-    totalStudents.value = data.total
+    totalPages.value = data.pages || 1
+    totalStudents.value = data.total || 0
   } catch (err) {
     error.value = 'Failed to load students. Please try again.'
     students.value = []
@@ -70,7 +77,7 @@ function prevPage() {
 }
 
 function nextPage() {
-  if (page.value < totalPages.value) {
+  if (page.value < (totalPages.value || 1)) {
     page.value++
     fetchStudents()
   }
@@ -90,6 +97,7 @@ async function onDelete(student) {
 }
 
 function formatDate(dateStr) {
+  if (!dateStr) return ''
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
@@ -98,10 +106,8 @@ function statusClass(status) {
   return `status-badge status-${status}`
 }
 
-// Expose fetchStudents so parent can call it after create/edit
 defineExpose({ fetchStudents })
 
-// Initial fetch
 fetchStudents()
 </script>
 
@@ -119,8 +125,7 @@ fetchStudents()
         </select>
       </div>
       <div class="total-count" v-if="!loading && !error">
-        <span class="count-number">{{ totalStudents }}</span>
-        student{{ totalStudents !== 1 ? 's' : '' }} found
+        {{ showingRange }}
       </div>
     </div>
 
@@ -128,7 +133,7 @@ fetchStudents()
     <div v-if="loading" class="state-card loading-state">
       <div class="spinner-ring"></div>
       <p class="state-title">Loading students...</p>
-      <p class="state-subtitle">Fetching data from the server</p>
+      <p class="state-subtitle">Fetching data from server</p>
     </div>
 
     <!-- Error state -->
@@ -197,36 +202,43 @@ fetchStudents()
       </table>
     </div>
 
-    <!-- Numbered Pagination -->
-    <div v-if="totalPages > 1 && !loading && !error" class="pagination">
-      <button
-        @click="prevPage"
-        :disabled="page <= 1"
-        class="btn btn-page btn-nav"
-      >
-        ← Previous
-      </button>
-
-      <div class="page-numbers">
+    <!-- Always Visible Pagination Bar -->
+    <div v-if="students.length > 0 && !loading && !error" class="pagination-container">
+      <div class="pagination-info">
+        Page <strong>{{ page }}</strong> of <strong>{{ totalPages || 1 }}</strong>
+      </div>
+      <div class="pagination-controls">
         <button
-          v-for="(p, index) in visiblePages"
-          :key="index"
-          @click="goToPage(p)"
-          class="btn btn-page"
-          :class="{ 'btn-page-active': p === page, 'btn-page-ellipsis': p === '...' }"
-          :disabled="p === '...'"
+          @click="prevPage"
+          :disabled="page <= 1"
+          class="btn btn-page btn-nav"
+          title="Previous page"
         >
-          {{ p }}
+          ← Previous
+        </button>
+
+        <div class="page-numbers">
+          <button
+            v-for="(p, index) in visiblePages"
+            :key="index"
+            @click="goToPage(p)"
+            class="btn btn-page"
+            :class="{ 'btn-page-active': p === page, 'btn-page-ellipsis': p === '...' }"
+            :disabled="p === '...' || p === page"
+          >
+            {{ p }}
+          </button>
+        </div>
+
+        <button
+          @click="nextPage"
+          :disabled="page >= totalPages || totalPages <= 1"
+          class="btn btn-page btn-nav"
+          title="Next page"
+        >
+          Next →
         </button>
       </div>
-
-      <button
-        @click="nextPage"
-        :disabled="page >= totalPages"
-        class="btn btn-page btn-nav"
-      >
-        Next →
-      </button>
     </div>
   </div>
 </template>
@@ -277,13 +289,9 @@ fetchStudents()
 }
 
 .total-count {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--color-text-secondary);
-}
-
-.count-number {
-  font-weight: 700;
-  color: var(--color-primary);
+  font-weight: 500;
 }
 
 /* State cards (Loading, Error, Empty) */
@@ -450,15 +458,27 @@ tbody tr:last-child td {
   margin-left: 0.4rem;
 }
 
-/* Pagination */
-.pagination {
+/* Pagination Container */
+.pagination-container {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
-  gap: 0.5rem;
   margin-top: 1.25rem;
   padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
   flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .page-numbers {
@@ -490,7 +510,7 @@ tbody tr:last-child td {
 }
 
 .btn-page:disabled {
-  opacity: 0.4;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -516,15 +536,9 @@ tbody tr:last-child td {
 }
 
 @media (max-width: 700px) {
-  .td-email {
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .btn-nav {
-    display: none;
+  .pagination-container {
+    flex-direction: column;
+    align-items: center;
   }
 }
 </style>
