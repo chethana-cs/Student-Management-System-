@@ -32,7 +32,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
         :aria-label="title"
       >
         <div class="modal-icon" :class="`icon-${confirmType}`">
-          ⚠️
+          !
         </div>
         <h3 class="modal-title">{{ title }}</h3>
         <p class="modal-message">{{ message }}</p>
@@ -69,8 +69,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(2px);
+  background: rgba(30, 41, 59, 0.32);
+  backdrop-filter: blur(5px);
   z-index: 999;
   display: flex;
   align-items: center;
@@ -80,12 +80,12 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
 .modal-card {
   background: var(--color-surface, #ffffff);
-  border-radius: 12px;
+  border-radius: 16px;
   width: 100%;
   max-width: 420px;
   padding: 1.5rem;
   text-align: center;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 24px 60px -28px rgba(15, 23, 42, 0.45);
   border: 1px solid var(--color-border, #e2e8f0);
   animation: modalPop 0.2s ease-out;
 }
@@ -102,8 +102,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 }
 
 .modal-icon {
-  width: 3rem;
-  height: 3rem;
+  width: 3.25rem;
+  height: 3.25rem;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -113,8 +113,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 }
 
 .icon-danger {
-  background: #fef2f2;
-  border: 1px solid #fecaca;
+  background: #fff1f2;
+  border: 1px solid #fecdd3;
 }
 
 .modal-title {

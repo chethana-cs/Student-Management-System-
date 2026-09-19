@@ -88,7 +88,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
         </div>
 
         <div v-else-if="error" class="detail-error">
-          <p>⚠️ {{ error }}</p>
+          <p>{{ error }}</p>
           <button @click="fetchDetails(studentId)" class="btn btn-ghost btn-small">
             Retry
           </button>
@@ -134,7 +134,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
             @click="emit('edit', student); emit('close')"
             class="btn btn-primary btn-small"
           >
-            ✏️ Edit Student
+            Edit Student
           </button>
           <button @click="emit('close')" class="btn btn-ghost btn-small">
             Close
@@ -152,8 +152,8 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(15, 23, 42, 0.45);
-  backdrop-filter: blur(2px);
+  background: rgba(30, 41, 59, 0.32);
+  backdrop-filter: blur(5px);
   z-index: 999;
   display: flex;
   align-items: center;
@@ -163,11 +163,11 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 
 .modal-card {
   background: var(--color-surface, #ffffff);
-  border-radius: 12px;
+  border-radius: 16px;
   width: 100%;
   max-width: 480px;
   padding: 1.5rem;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 24px 60px -28px rgba(15, 23, 42, 0.45);
   border: 1px solid var(--color-border, #e2e8f0);
   animation: modalPop 0.2s ease-out;
 }
@@ -193,8 +193,13 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 }
 
 .btn-close {
-  background: transparent;
-  border: none;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
   font-size: 1.5rem;
   color: #94a3b8;
   cursor: pointer;
@@ -221,16 +226,16 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   gap: 1rem;
   margin-bottom: 1.25rem;
   padding: 1rem;
-  background: #f8fafc;
-  border-radius: 10px;
-  border: 1px solid #f1f5f9;
+  background: linear-gradient(135deg, #e9f7f3, #f8fcf9);
+  border-radius: 12px;
+  border: 1px solid #cde9df;
 }
 
 .avatar-large {
   width: 3.25rem;
   height: 3.25rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, #0f766e, #5db8a8);
   color: #ffffff;
   display: flex;
   align-items: center;
@@ -263,7 +268,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
 }
 
 .status-active { background: #dcfce7; color: #15803d; }
-.status-graduated { background: #dbeafe; color: #1d4ed8; }
+.status-graduated { background: #dff4ef; color: #0f766e; }
 .status-dropped { background: #fef3c7; color: #b45309; }
 
 .info-grid {
@@ -277,7 +282,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   flex-direction: column;
   background: #ffffff;
   padding: 0.65rem 0.85rem;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -308,7 +313,7 @@ onUnmounted(() => window.removeEventListener('keydown', handleKeydown))
   width: 1.75rem;
   height: 1.75rem;
   border: 2px solid #e2e8f0;
-  border-top-color: #6366f1;
+  border-top-color: #0f766e;
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
   margin-bottom: 0.5rem;

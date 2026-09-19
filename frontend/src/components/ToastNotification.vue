@@ -20,9 +20,9 @@ const emit = defineEmits(['dismiss'])
         role="alert"
       >
         <span class="toast-icon">
-          <template v-if="toast.type === 'success'">✅</template>
-          <template v-else-if="toast.type === 'error'">⚠️</template>
-          <template v-else>ℹ️</template>
+          <template v-if="toast.type === 'success'">✓</template>
+          <template v-else-if="toast.type === 'error'">!</template>
+          <template v-else>i</template>
         </span>
         <span class="toast-message">{{ toast.message }}</span>
         <button
@@ -57,10 +57,10 @@ const emit = defineEmits(['dismiss'])
   align-items: center;
   gap: 0.65rem;
   padding: 0.75rem 1rem;
-  border-radius: 8px;
+  border-radius: 12px;
   background: var(--color-surface, #ffffff);
   border: 1px solid var(--color-border, #e2e8f0);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 14px 30px -16px rgba(15, 23, 42, 0.28);
   font-size: 0.875rem;
   color: var(--color-text, #1e293b);
   font-weight: 500;
@@ -75,11 +75,19 @@ const emit = defineEmits(['dismiss'])
 }
 
 .toast-info {
-  border-left: 4px solid #6366f1;
+  border-left: 4px solid #0f766e;
 }
 
 .toast-icon {
-  font-size: 1rem;
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  background: #e9f7f3;
+  color: #0f766e;
+  font-size: 0.8rem;
+  font-weight: 800;
   flex-shrink: 0;
 }
 

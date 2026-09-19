@@ -180,7 +180,7 @@ fetchStudents()
     <div class="toolbar">
       <div class="toolbar-left">
         <div class="search-box">
-          <span class="search-icon">🔍</span>
+          <span class="search-icon" aria-hidden="true"></span>
           <input
             v-model="searchQuery"
             type="text"
@@ -218,17 +218,17 @@ fetchStudents()
 
     <!-- Error State -->
     <div v-else-if="error" class="state-card error-state">
-      <div class="state-emoji">😕</div>
+      <div class="state-emoji">!</div>
       <p class="state-title">Failed to load students</p>
       <p class="state-subtitle">{{ error }}</p>
       <button @click="fetchStudents" class="btn btn-primary retry-btn">
-        🔄 Retry
+        Retry
       </button>
     </div>
 
     <!-- Empty State -->
     <div v-else-if="filteredStudents.length === 0" class="state-card empty-state">
-      <div class="state-emoji">📋</div>
+      <div class="state-emoji">—</div>
       <p class="state-title">No students found</p>
       <p class="state-subtitle" v-if="searchQuery">
         No results matching "{{ searchQuery }}". Try a different search term.
@@ -273,21 +273,21 @@ fetchStudents()
                 class="btn btn-small btn-ghost"
                 title="View details"
               >
-                👁️ View
+                View
               </button>
               <button
                 @click="emit('edit', student)"
                 class="btn btn-small btn-outline"
                 title="Edit student"
               >
-                ✏️ Edit
+                Edit
               </button>
               <button
                 @click="promptDelete(student)"
                 class="btn btn-small btn-danger"
                 title="Delete student"
               >
-                🗑️ Delete
+                Delete
               </button>
             </td>
           </tr>
@@ -365,21 +365,36 @@ fetchStudents()
 .metrics-bar {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: 0.85rem;
+  margin-bottom: 1.75rem;
 }
 
 .metric-card {
-  background: var(--color-bg, #f8fafc);
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(145deg, #ffffff, #f7fbf8);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  padding: 0.9rem 1rem;
   display: flex;
   flex-direction: column;
 }
 
+.metric-card::before {
+  content: '';
+  width: 2.25rem;
+  height: 3px;
+  border-radius: 999px;
+  background: #8fd3c4;
+  margin-bottom: 0.55rem;
+}
+
+.metric-card:nth-child(2)::before { background: #86efac; }
+.metric-card:nth-child(3)::before { background: #a7d7ce; }
+.metric-card:nth-child(4)::before { background: #fcd34d; }
+
 .metric-value {
-  font-size: 1.25rem;
+  font-size: 1.4rem;
   font-weight: 800;
   color: var(--color-text, #1e293b);
   line-height: 1.2;
@@ -393,7 +408,7 @@ fetchStudents()
 }
 
 .text-active { color: #16a34a; }
-.text-graduated { color: #2563eb; }
+.text-graduated { color: #0f766e; }
 .text-dropped { color: #d97706; }
 
 /* Toolbar */
@@ -401,7 +416,11 @@ fetchStudents()
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
+  padding: 0.9rem;
+  border: 1px solid #e1ebe5;
+  border-radius: 12px;
+  background: #fbfdff;
   flex-wrap: wrap;
   gap: 0.75rem;
 }
@@ -422,26 +441,39 @@ fetchStudents()
 .search-icon {
   position: absolute;
   left: 0.65rem;
-  font-size: 0.85rem;
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 1.7px solid #78908a;
+  border-radius: 50%;
   pointer-events: none;
-  opacity: 0.6;
+}
+
+.search-icon::after {
+  content: '';
+  position: absolute;
+  width: 0.35rem;
+  height: 1.7px;
+  background: #78908a;
+  transform: rotate(45deg);
+  right: -0.25rem;
+  bottom: -0.12rem;
 }
 
 .search-input {
-  padding: 0.45rem 0.85rem 0.45rem 2.1rem;
+  padding: 0.58rem 0.85rem 0.58rem 2.1rem;
   border: 1.5px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background: var(--color-surface, #ffffff);
   color: var(--color-text, #1e293b);
   font-size: 0.85rem;
-  width: 220px;
+  width: 250px;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
 .search-input:focus {
   outline: none;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  border-color: var(--color-primary, #0f766e);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .filter-group {
@@ -457,7 +489,7 @@ fetchStudents()
 }
 
 .filter-group select {
-  padding: 0.45rem 0.85rem;
+  padding: 0.58rem 0.85rem;
   border: 1.5px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
   background: var(--color-surface, #ffffff);
@@ -469,8 +501,8 @@ fetchStudents()
 
 .filter-group select:focus {
   outline: none;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  border-color: var(--color-primary, #0f766e);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .total-count {
@@ -524,8 +556,16 @@ fetchStudents()
 }
 
 .state-emoji {
-  font-size: 2.5rem;
-  margin-bottom: 0.75rem;
+  display: grid;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  margin: 0 auto 0.75rem;
+  border-radius: 50%;
+  background: var(--color-primary-light, #e9f7f3);
+  color: var(--color-primary, #0f766e);
+  font-size: 1.25rem;
+  font-weight: 700;
 }
 
 .state-title {
@@ -552,7 +592,7 @@ fetchStudents()
 /* Table */
 .table-wrapper {
   overflow-x: auto;
-  border-radius: 10px;
+  border-radius: 12px;
   border: 1px solid var(--color-border, #e2e8f0);
 }
 
@@ -564,8 +604,8 @@ table {
 thead th {
   text-align: left;
   padding: 0.85rem 1rem;
-  background: #f8fafc;
-  border-bottom: 2px solid var(--color-border, #e2e8f0);
+  background: #f5faf7;
+  border-bottom: 1px solid var(--color-border, #e2e8f0);
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -576,7 +616,7 @@ thead th {
 .th-actions { text-align: right; }
 
 tbody td {
-  padding: 0.8rem 1rem;
+  padding: 0.9rem 1rem;
   border-bottom: 1px solid var(--color-border, #e2e8f0);
   font-size: 0.9rem;
 }
@@ -588,7 +628,7 @@ tbody tr:last-child td { border-bottom: none; }
   transition: background 0.15s;
 }
 
-.student-row:hover { background: #f8fafc; }
+.student-row:hover { background: #f3faf7; }
 
 /* Avatar */
 .td-name {
@@ -605,7 +645,7 @@ tbody tr:last-child td { border-bottom: none; }
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #818cf8);
+  background: linear-gradient(135deg, #0f766e, #5db8a8);
   color: #ffffff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -626,7 +666,7 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .status-active { background: #dcfce7; color: #15803d; }
-.status-graduated { background: #dbeafe; color: #1d4ed8; }
+.status-graduated { background: #dff4ef; color: #0f766e; }
 .status-dropped { background: #fef3c7; color: #b45309; }
 
 /* Actions */
@@ -638,7 +678,7 @@ tbody tr:last-child td { border-bottom: none; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 1.25rem;
+  margin-top: 1.5rem;
   padding-top: 1rem;
   border-top: 1px solid var(--color-border, #e2e8f0);
   flex-wrap: wrap;
@@ -677,8 +717,8 @@ tbody tr:last-child td { border-bottom: none; }
 
 .btn-page:hover:not(:disabled):not(.btn-page-active) {
   background: #f8fafc;
-  border-color: #6366f1;
-  color: #6366f1;
+  border-color: #0f766e;
+  color: #0f766e;
 }
 
 .btn-page:disabled {
@@ -687,8 +727,8 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .btn-page-active {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: #0f766e;
+  border-color: #0f766e;
   color: #ffffff;
   font-weight: 600;
   cursor: default;

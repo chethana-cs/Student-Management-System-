@@ -146,13 +146,13 @@ async function onSubmit() {
 <template>
   <div class="student-form" role="region" aria-label="Student Form">
     <div class="form-header">
-      <div class="form-icon">{{ isEdit ? '✏️' : '➕' }}</div>
+      <div class="form-icon">{{ isEdit ? 'ED' : 'AD' }}</div>
       <h2>{{ isEdit ? 'Edit Student Record' : 'Add New Student' }}</h2>
     </div>
 
     <!-- API error banner -->
     <div v-if="apiError" class="error-banner" role="alert">
-      <span class="error-icon">⚠️</span>
+      <span class="error-icon">!</span>
       <span>{{ apiError }}</span>
     </div>
 
@@ -250,10 +250,10 @@ async function onSubmit() {
 
 <style scoped>
 .student-form {
-  background: var(--color-surface, #ffffff);
+  background: linear-gradient(145deg, #ffffff, #fbfdff);
   border: 1px solid var(--color-border, #e2e8f0);
-  border-radius: 12px;
-  padding: 1.5rem;
+  border-radius: 14px;
+  padding: 1.6rem;
   margin-bottom: 1.5rem;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04);
 }
@@ -262,11 +262,17 @@ async function onSubmit() {
   display: flex;
   align-items: center;
   gap: 0.6rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
 }
 
 .form-icon {
-  font-size: 1.2rem;
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  font-size: 1rem;
+  background: var(--color-primary-light, #e9f7f3);
+  border-radius: 9px;
 }
 
 h2 {
@@ -322,6 +328,7 @@ h2 {
 .form-group input,
 .form-group select {
   width: 100%;
+  min-height: 2.65rem;
   padding: 0.55rem 0.85rem;
   border: 1.5px solid var(--color-border, #e2e8f0);
   border-radius: 8px;
@@ -335,8 +342,8 @@ h2 {
 .form-group input:focus,
 .form-group select:focus {
   outline: none;
-  border-color: var(--color-primary, #6366f1);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  border-color: var(--color-primary, #0f766e);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .form-group.has-error input,
@@ -359,8 +366,9 @@ h2 {
 .form-actions {
   display: flex;
   gap: 0.75rem;
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
+  margin-top: 0.85rem;
+  padding-top: 1rem;
+  border-top: 1px solid #edf2f7;
 }
 
 .btn-spinner {
