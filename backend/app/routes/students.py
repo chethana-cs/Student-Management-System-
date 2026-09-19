@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 from flask import jsonify, request
 from sqlalchemy.exc import IntegrityError
+from werkzeug.exceptions import NotFound, MethodNotAllowed
 
 from app import db
 from app.models import Student, VALID_ENROLLMENT_STATUSES
@@ -87,12 +88,12 @@ def validate_student_data(data, is_update=False):
 
 # --- Error Handlers ---
 
-@students_bp.errorhandler(404)
+@students_bp.app_errorhandler(NotFound)
 def not_found(error):
-    return jsonify({"error": "Student not found."}), 404
+    return jsonify({"error": "Resource not found."}), 404
 
 
-@students_bp.errorhandler(405)
+@students_bp.app_errorhandler(MethodNotAllowed)
 def method_not_allowed(error):
     return jsonify({"error": "Method not allowed."}), 405
 
